@@ -428,7 +428,7 @@
         <ul>
           <li>Your brief and your draft posts exist only in the page open in your browser.</li>
           <li>Your Buffer access token (and refresh token, if Buffer issues one) is stored <strong>only in your own browser's localStorage</strong>, on your device, so you stay connected between visits. It is never sent anywhere except to Buffer's own API, in the Authorization header of requests you initiate.</li>
-          <li>When you schedule posts, the post text, channel and time are sent directly from your browser to Buffer's API (api.buffer.com) — that is the scheduling you asked for. Nothing is sent to any PostPilot server, because there is none.</li>
+          <li>When you schedule posts, the post text, channel and time are sent from your browser to Buffer's API (api.buffer.com) — that is the scheduling you asked for. Because Buffer's API does not accept direct calls from other websites' pages, the request passes through a same-site relay that only forwards it and stores nothing — no copy of your posts or tokens is kept anywhere.</li>
         </ul>
 
         <h2>What is never done with your data</h2>
@@ -489,6 +489,7 @@
       AUTH_URL: 'https://auth.buffer.com/auth',
       TOKEN_URL: 'https://auth.buffer.com/token',
       API_URL: 'https://api.buffer.com',
+      API_PROXY_URL: '/api/buffer',
 
       getAccessToken() { return localStorage.getItem(LS_ACCESS); },
       getRefreshToken() { return localStorage.getItem(LS_REFRESH); },
@@ -552,16 +553,28 @@
       async graphql(query, variables, retried) {
         const token = this.getAccessToken();
         if (!token) throw new Error('Not connected to Buffer.');
-        const res = await fetch(this.API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-          body: JSON.stringify({ query: query, variables: variables || {} })
-        });
+        const payload = JSON.stringify({ query: query, variables: variables || {} });
+        const headers = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token };
+        /* Buffer's API only returns CORS headers for Buffer's own origin, so
+           browser apps on other domains cannot read its responses directly.
+           A same-site relay (/api/buffer) is therefore tried first; if no
+           relay answers with JSON, fall back to the direct API call. */
+        let res = null;
+        try {
+          const proxyRes = await fetch(this.API_PROXY_URL, { method: 'POST', headers: headers, body: payload });
+          const proxyText = await proxyRes.text();
+          try { res = { status: proxyRes.status, ok: proxyRes.ok, jsonData: JSON.parse(proxyText) }; }
+          catch (e) { res = null; }
+        } catch (e) { res = null; }
+        if (!res) {
+          const directRes = await fetch(this.API_URL, { method: 'POST', headers: headers, body: payload });
+          res = { status: directRes.status, ok: directRes.ok, jsonData: await directRes.json().catch(() => ({})) };
+        }
         if (res.status === 401 && !retried && this.getRefreshToken()) {
           await this.refreshAccessToken();
           return this.graphql(query, variables, true);
         }
-        const data = await res.json().catch(() => ({}));
+        const data = res.jsonData || {};
         if (!res.ok) throw new Error('Buffer API error (HTTP ' + res.status + ')');
         if (data.errors && data.errors.length) throw new Error(data.errors[0].message || 'Buffer API error.');
         return data.data;
