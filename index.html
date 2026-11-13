@@ -1,0 +1,1203 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="description" content="PostPilot drafts a full day of social posts from one short brief and schedules them through Buffer." />
+    <link rel="icon" href="data:," />
+    <title>PostPilot — a day of posts from one brief</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
+    <style>
+      button, [role="button"], select, summary, input:not([type="checkbox"], [type="radio"]) { min-height: 2.25rem; }
+
+      :root {
+        --bg: #f4f0e6;
+        --surface: #fffdf7;
+        --surface-2: #ece5d3;
+        --ink: #1a1610;
+        --muted: #6f6450;
+        --line: #d9cfb6;
+        --accent: #e4572e;
+        --accent-deep: #c7431f;
+        --accent-soft: #fbe9df;
+        --teal: #0e7569;
+        --teal-soft: #e0f0ec;
+        --ok: #177245;
+        --ok-soft: #e2f2e6;
+        --warn: #9a6a00;
+        --warn-soft: #fbf0d2;
+        --danger: #b3261e;
+        --danger-soft: #fbe7e4;
+        --shadow: 0 10px 30px rgba(26, 22, 16, 0.08);
+        --radius: 14px;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #14110d;
+          --surface: #201c16;
+          --surface-2: #2a251d;
+          --ink: #f3ecdc;
+          --muted: #ab9f86;
+          --line: #3d372a;
+          --accent: #ff6d3f;
+          --accent-deep: #ff8159;
+          --accent-soft: #3a241a;
+          --teal: #3ec2b2;
+          --teal-soft: #173330;
+          --ok: #5fc98a;
+          --ok-soft: #17301f;
+          --warn: #e8b64c;
+          --warn-soft: #332a12;
+          --danger: #ff8a7a;
+          --danger-soft: #361d19;
+          --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        }
+      }
+
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+        font-size: 16px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+      .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+
+      .wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px 40px; }
+
+      /* ---------- Top bar ---------- */
+      .topbar {
+        display: flex; align-items: center; justify-content: space-between; gap: 16px;
+        padding: 18px 0 14px; flex-wrap: wrap;
+      }
+      .wordmark { display: flex; align-items: center; gap: 11px; text-decoration: none; color: var(--ink); }
+      .wordmark .glyph {
+        width: 38px; height: 38px; border-radius: 10px; background: var(--accent);
+        display: grid; place-items: center; flex: none;
+      }
+      .wordmark .glyph svg { width: 21px; height: 21px; fill: #fff; }
+      .wordmark .name { font-weight: 900; font-size: 24px; letter-spacing: -0.02em; line-height: 1; }
+      .wordmark .tag { display: block; font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.04em; margin-top: 3px; }
+      .conn { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+      .status-pill {
+        display: inline-flex; align-items: center; gap: 8px;
+        font-size: 13px; font-weight: 700; padding: 8px 13px;
+        border: 1.5px solid var(--line); border-radius: 999px; background: var(--surface);
+      }
+      .status-pill .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
+      .status-pill.on { border-color: var(--teal); color: var(--teal); }
+      .status-pill.on .dot { background: var(--teal); }
+      .status-pill.demo { border-color: var(--warn); color: var(--warn); }
+      .status-pill.demo .dot { background: var(--warn); }
+
+      /* ---------- Buttons ---------- */
+      .btn {
+        font-family: inherit; font-weight: 700; font-size: 15px; cursor: pointer;
+        border-radius: 10px; border: 1.5px solid transparent; padding: 9px 18px;
+        display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        transition: background 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
+        min-height: 44px;
+      }
+      .btn:active { transform: translateY(1px); }
+      .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+      .btn-primary { background: var(--accent); color: #fff; }
+      .btn-primary:hover:not(:disabled) { background: var(--accent-deep); }
+      .btn-ghost { background: var(--surface); color: var(--ink); border-color: var(--line); }
+      .btn-ghost:hover:not(:disabled) { border-color: var(--ink); }
+      .btn-small { min-height: 38px; padding: 6px 13px; font-size: 13.5px; border-radius: 8px; }
+      .btn-big { width: 100%; font-size: 17px; min-height: 52px; border-radius: 12px; }
+
+      /* ---------- Demo banner ---------- */
+      .demo-banner {
+        display: flex; gap: 12px; align-items: flex-start;
+        background: var(--warn-soft); border: 1.5px solid var(--warn);
+        border-radius: var(--radius); padding: 13px 16px; margin-bottom: 22px;
+        font-size: 14.5px;
+      }
+      .demo-banner .tag {
+        font-family: "IBM Plex Mono", monospace; font-weight: 600; font-size: 12px;
+        background: var(--warn); color: #fff; padding: 3px 8px; border-radius: 5px;
+        letter-spacing: 0.08em; flex: none; margin-top: 1px;
+      }
+      @media (prefers-color-scheme: dark) { .demo-banner .tag { color: #14110d; } }
+      .demo-banner p { margin: 0; }
+      .demo-banner strong { font-weight: 800; }
+
+      /* ---------- Layout ---------- */
+      .layout { display: grid; grid-template-columns: 372px minmax(0, 1fr); gap: 26px; align-items: start; }
+      @media (max-width: 920px) { .layout { grid-template-columns: 1fr; } }
+
+      .panel {
+        background: var(--surface); border: 1.5px solid var(--line);
+        border-radius: var(--radius); box-shadow: var(--shadow);
+      }
+      .brief-panel { padding: 22px; position: sticky; top: 18px; }
+      @media (max-width: 920px) { .brief-panel { position: static; } }
+
+      .step-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 16px; }
+      .step-num {
+        font-family: "IBM Plex Mono", monospace; font-weight: 600; font-size: 13px;
+        background: var(--ink); color: var(--bg); border-radius: 6px; padding: 2px 8px; flex: none;
+      }
+      .step-head h2 { font-size: 19px; font-weight: 800; letter-spacing: -0.01em; margin: 0; }
+      .step-head .sub { margin-left: auto; font-size: 12.5px; color: var(--muted); font-weight: 600; text-align: right; }
+
+      .field-label { display: block; font-size: 13px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); margin: 18px 0 7px; }
+      .field-label:first-of-type { margin-top: 0; }
+      textarea, select, input[type="time"] {
+        font-family: inherit; font-size: 15.5px; color: var(--ink);
+        background: var(--bg); border: 1.5px solid var(--line); border-radius: 10px;
+        padding: 11px 12px; width: 100%;
+      }
+      textarea:focus, select:focus, input:focus-visible, button:focus-visible, a:focus-visible {
+        outline: 3px solid var(--accent-soft); outline-offset: 1px; border-color: var(--accent);
+      }
+      textarea { resize: vertical; min-height: 108px; line-height: 1.45; }
+      .field-hint { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+
+      .segmented { display: flex; gap: 6px; flex-wrap: wrap; }
+      .segmented .seg {
+        flex: 1 1 auto; display: flex; align-items: center; justify-content: center; min-height: 42px;
+        padding: 8px 12px; border: 1.5px solid var(--line); border-radius: 9px;
+        font-family: inherit; font-weight: 700; font-size: 14px; background: var(--bg); color: var(--ink);
+        text-align: center; cursor: pointer;
+      }
+      .segmented .seg[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+      .brief-actions { margin-top: 22px; }
+      .engine-note { font-size: 12.5px; color: var(--muted); margin-top: 10px; text-align: center; }
+
+      /* ---------- Drafts ---------- */
+      .drafts-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+      .drafts-head h2 { font-size: 21px; font-weight: 900; letter-spacing: -0.015em; margin: 0; }
+      .drafts-head .date { font-family: "IBM Plex Mono", monospace; font-size: 13px; color: var(--muted); font-weight: 600; }
+      .drafts-head .spacer { flex: 1; }
+
+      .empty-state {
+        border: 1.5px dashed var(--line); border-radius: var(--radius);
+        padding: 38px 24px; text-align: center; color: var(--muted); background: var(--surface);
+      }
+      .empty-state strong { color: var(--ink); display: block; font-size: 17px; margin-bottom: 6px; }
+      .empty-state p { margin: 0 auto; max-width: 420px; font-size: 14.5px; }
+
+      .post-card {
+        display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 0;
+        background: var(--surface); border: 1.5px solid var(--line);
+        border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 16px; overflow: hidden;
+      }
+      @media (max-width: 560px) { .post-card { grid-template-columns: 74px minmax(0, 1fr); } }
+      .time-rail {
+        background: var(--surface-2); border-right: 1.5px solid var(--line);
+        padding: 16px 10px; display: flex; flex-direction: column; align-items: center; gap: 5px; text-align: center;
+      }
+      .time-rail .slot-label { font-size: 11px; font-weight: 800; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+      .time-rail input[type="time"] {
+        border: none; background: transparent; font-family: "IBM Plex Mono", monospace;
+        font-weight: 600; font-size: 16px; text-align: center; padding: 4px 0; width: 100%;
+      }
+      .time-rail input[type="time"]:focus { outline: 3px solid var(--accent-soft); border-radius: 6px; }
+      .time-rail .day-note { font-size: 11px; color: var(--warn); font-weight: 700; display: none; }
+      .post-body { padding: 16px 18px 14px; min-width: 0; }
+      .post-body textarea { min-height: 86px; background: var(--surface); border-color: var(--line); }
+      .post-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+      .type-tag {
+        font-family: "IBM Plex Mono", monospace; font-size: 11.5px; font-weight: 600;
+        background: var(--teal-soft); color: var(--teal); padding: 3px 8px; border-radius: 5px; letter-spacing: 0.04em;
+      }
+      .char-count { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; color: var(--muted); margin-left: auto; }
+      .char-count.over { color: var(--danger); font-weight: 600; }
+      .regen-btn {
+        font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+        background: none; border: 1.5px solid var(--line); color: var(--ink);
+        border-radius: 8px; padding: 6px 12px; min-height: 36px;
+        display: inline-flex; align-items: center; gap: 6px;
+      }
+      .regen-btn:hover { border-color: var(--accent); color: var(--accent-deep); }
+      .regen-btn svg { width: 14px; height: 14px; fill: currentColor; }
+
+      .channels-row { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+      .channels-row .ch-label { font-size: 11.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 7px; }
+      .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+      .chip {
+        display: inline-flex; align-items: center; gap: 7px; min-height: 36px;
+        padding: 6px 12px; border: 1.5px solid var(--line); border-radius: 999px;
+        font-family: inherit; font-size: 13.5px; font-weight: 600; background: var(--bg); color: var(--ink);
+        cursor: pointer;
+      }
+      .chip .svc { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+      .chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-deep); }
+      .chip[aria-pressed="true"] .svc { background: var(--accent); }
+      @media (prefers-color-scheme: dark) { .chip[aria-pressed="true"] { color: var(--accent); } }
+
+      .post-status { display: none; margin-top: 12px; font-size: 13.5px; font-weight: 600; border-radius: 8px; padding: 8px 12px; }
+      .post-status.show { display: block; }
+      .post-status.ok { background: var(--ok-soft); color: var(--ok); }
+      .post-status.partial { background: var(--warn-soft); color: var(--warn); }
+      .post-status.fail { background: var(--danger-soft); color: var(--danger); }
+
+      /* ---------- Queue ---------- */
+      .queue-panel { margin-top: 28px; padding: 22px; }
+      .queue-list { display: flex; flex-direction: column; }
+      .queue-item {
+        display: grid; grid-template-columns: 86px minmax(0, 1fr) auto; gap: 14px;
+        padding: 13px 0; border-top: 1px solid var(--line); align-items: start;
+      }
+      .queue-item:first-child { border-top: none; padding-top: 4px; }
+      @media (max-width: 560px) { .queue-item { grid-template-columns: 70px minmax(0, 1fr); } .queue-item .q-status { grid-column: 2; } }
+      .queue-item .q-time { font-family: "IBM Plex Mono", monospace; font-weight: 600; font-size: 14.5px; }
+      .queue-item .q-time small { display: block; font-size: 11px; color: var(--muted); font-weight: 500; }
+      .queue-item .q-text { font-size: 14.5px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+      .queue-item .q-channels { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+      .q-status { font-size: 12px; font-weight: 800; letter-spacing: 0.04em; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+      .q-status.ok { background: var(--ok-soft); color: var(--ok); }
+      .q-status.demo { background: var(--warn-soft); color: var(--warn); }
+      .q-status.fail { background: var(--danger-soft); color: var(--danger); }
+      .q-status.partial { background: var(--warn-soft); color: var(--warn); }
+      .queue-empty { color: var(--muted); font-size: 14.5px; padding: 6px 0 2px; }
+
+      /* ---------- Toast ---------- */
+      .toast {
+        position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%) translateY(20px);
+        background: var(--ink); color: var(--bg); font-weight: 600; font-size: 14.5px;
+        padding: 12px 20px; border-radius: 10px; box-shadow: var(--shadow);
+        opacity: 0; pointer-events: none; transition: opacity 0.2s ease, transform 0.2s ease;
+        max-width: min(92vw, 560px); text-align: center; z-index: 50;
+      }
+      .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+      /* ---------- Footer & privacy ---------- */
+      footer { margin-top: 44px; border-top: 1.5px solid var(--line); padding-top: 20px; display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+      footer p { margin: 0; font-size: 13.5px; color: var(--muted); }
+      footer .spacer { flex: 1; }
+      footer a, .link-btn {
+        color: var(--ink); font-weight: 700; font-size: 14px; background: none; border: none;
+        cursor: pointer; font-family: inherit; text-decoration: underline; text-underline-offset: 3px;
+        padding: 8px 6px; min-height: 36px; display: inline-flex; align-items: center;
+      }
+      .privacy-view { max-width: 760px; margin: 0 auto; }
+      .privacy-view h1 { font-size: 32px; font-weight: 900; letter-spacing: -0.02em; margin: 8px 0 6px; }
+      .privacy-view .updated { color: var(--muted); font-size: 13.5px; font-family: "IBM Plex Mono", monospace; margin-bottom: 26px; }
+      .privacy-view h2 { font-size: 19px; font-weight: 800; margin: 28px 0 8px; }
+      .privacy-view p, .privacy-view li { font-size: 16px; line-height: 1.65; }
+      .privacy-view ul { padding-left: 22px; }
+      [hidden] { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+
+      <!-- ======================= APP VIEW ======================= -->
+      <div id="app-view">
+        <header class="topbar">
+          <a class="wordmark" href="#" id="wordmark-link" aria-label="PostPilot home">
+            <span class="glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M21.9 2.1a1 1 0 0 0-1.1-.9L2.4 9.6a1 1 0 0 0 .1 1.9l6.6 2.2 2.2 6.6a1 1 0 0 0 1.9.1l8.4-18.4a1 1 0 0 0-.7.1zM9.7 12.3l-4.9-1.6L18.9 4.1 12.3 18.2l-1.6-4.9a1 1 0 0 0-1-1z"/></svg>
+            </span>
+            <span><span class="name">PostPilot</span><span class="tag">A DAY OF POSTS FROM ONE BRIEF</span></span>
+          </a>
+          <div class="conn">
+            <span class="status-pill" id="conn-pill"><span class="dot"></span><span id="conn-text">Not connected</span></span>
+            <button class="btn btn-primary btn-small" id="connect-btn" type="button">Connect Buffer</button>
+            <button class="btn btn-ghost btn-small" id="disconnect-btn" type="button" hidden>Disconnect</button>
+          </div>
+        </header>
+
+        <div class="demo-banner" id="demo-banner" hidden>
+          <span class="tag">DEMO MODE</span>
+          <p><strong>You're flying the demo.</strong> No Buffer account is connected — drafts are real, channels are samples, and scheduling fills the on-screen queue below instead of posting. Add a Buffer OAuth client ID to go live.</p>
+        </div>
+
+        <div class="layout">
+          <!-- Step 1: Brief -->
+          <section class="panel brief-panel" aria-labelledby="brief-heading">
+            <div class="step-head">
+              <span class="step-num">01</span>
+              <h2 id="brief-heading">The brief</h2>
+              <span class="sub">one short paragraph<br />is plenty</span>
+            </div>
+            <form id="brief-form">
+              <label class="field-label" for="brief-text">Topic / brief</label>
+              <textarea id="brief-text" placeholder="e.g. We're launching a sourdough starter kit for home bakers this weekend — funny, friendly, with a launch-day discount." required></textarea>
+              <p class="field-hint">PostPilot pulls the keywords out of your brief and weaves them through the day.</p>
+
+              <label class="field-label" for="niche">Niche</label>
+              <select id="niche">
+                <option>Comedy / Entertainment</option>
+                <option>Sports</option>
+                <option>Food</option>
+                <option>Tech</option>
+                <option>Motivation</option>
+                <option>Pets</option>
+                <option>Business</option>
+              </select>
+
+              <span class="field-label" id="tone-label">Tone</span>
+              <div class="segmented" role="group" aria-labelledby="tone-label" id="tone-group">
+                <button type="button" class="seg" data-tone="Funny" aria-pressed="true">Funny</button>
+                <button type="button" class="seg" data-tone="Inspirational" aria-pressed="false">Inspirational</button>
+                <button type="button" class="seg" data-tone="Informative" aria-pressed="false">Informative</button>
+                <button type="button" class="seg" data-tone="Bold" aria-pressed="false">Bold</button>
+              </div>
+
+              <span class="field-label" id="count-label">Posts per day</span>
+              <div class="segmented" role="group" aria-labelledby="count-label" id="count-group">
+                <button type="button" class="seg" data-count="3" aria-pressed="false">3</button>
+                <button type="button" class="seg" data-count="4" aria-pressed="true">4</button>
+                <button type="button" class="seg" data-count="5" aria-pressed="false">5</button>
+              </div>
+
+              <div class="brief-actions">
+                <button class="btn btn-primary btn-big" id="draft-btn" type="submit">Draft my day</button>
+                <p class="engine-note">Drafts are written on this device — hooks, questions, tips, stories and calls-to-action, rotated across the day.</p>
+              </div>
+            </form>
+          </section>
+
+          <!-- Step 2 + 3: Drafts & scheduling -->
+          <section aria-labelledby="drafts-heading">
+            <div class="drafts-head">
+              <span class="step-num">02</span>
+              <h2 id="drafts-heading">Today's flight plan</h2>
+              <span class="date" id="today-date"></span>
+              <span class="spacer"></span>
+              <button class="btn btn-primary" id="schedule-btn" type="button" disabled>Schedule all</button>
+            </div>
+
+            <div class="empty-state" id="drafts-empty">
+              <strong>Nothing drafted yet</strong>
+              <p>Write a brief on the left, hit <em>Draft my day</em>, and PostPilot will lay out a full day of posts — each one editable, each with its own time slot and channels.</p>
+            </div>
+
+            <div id="drafts-list"></div>
+
+            <!-- Queue -->
+            <div class="panel queue-panel" aria-labelledby="queue-heading">
+              <div class="step-head">
+                <span class="step-num">03</span>
+                <h2 id="queue-heading">Today's queue</h2>
+                <span class="sub" id="queue-count"></span>
+              </div>
+              <div class="queue-list" id="queue-list">
+                <p class="queue-empty">Nothing scheduled yet. Draft a day and press <strong>Schedule all</strong> — every post lands here with its time, channels and status.</p>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <footer>
+          <p>PostPilot runs entirely in your browser. No account, no tracking, no PostPilot server.</p>
+          <span class="spacer"></span>
+          <button class="link-btn" id="privacy-link" type="button">Privacy policy</button>
+        </footer>
+      </div>
+
+      <!-- ======================= PRIVACY VIEW ======================= -->
+      <div id="privacy-view" class="privacy-view" hidden>
+        <header class="topbar">
+          <a class="wordmark" href="#" id="privacy-home-link" aria-label="Back to PostPilot">
+            <span class="glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M21.9 2.1a1 1 0 0 0-1.1-.9L2.4 9.6a1 1 0 0 0 .1 1.9l6.6 2.2 2.2 6.6a1 1 0 0 0 1.9.1l8.4-18.4a1 1 0 0 0-.7.1zM9.7 12.3l-4.9-1.6L18.9 4.1 12.3 18.2l-1.6-4.9a1 1 0 0 0-1-1z"/></svg>
+            </span>
+            <span><span class="name">PostPilot</span><span class="tag">PRIVACY POLICY</span></span>
+          </a>
+          <button class="btn btn-ghost btn-small" id="privacy-back-btn" type="button">← Back to PostPilot</button>
+        </header>
+
+        <h1>Privacy Policy</h1>
+        <p class="updated">Last updated: November 13, 2026</p>
+
+        <p>PostPilot is a small, browser-only tool that drafts a day of social posts from a brief you write and schedules them through your Buffer account. This page explains, in plain language, exactly what PostPilot does with your information.</p>
+
+        <h2>What PostPilot accesses</h2>
+        <p>When you choose to connect Buffer, PostPilot asks Buffer for permission to see your Buffer account and its channels (your connected social profiles) and to create and schedule posts. PostPilot uses that access <strong>only</strong> to:</p>
+        <ul>
+          <li>List your Buffer channels so you can choose where each post goes.</li>
+          <li>Schedule the exact posts you drafted, edited and approved in PostPilot, at the times you picked.</li>
+        </ul>
+        <p>PostPilot never reads your private messages, never posts anything you did not draft and schedule yourself, and never changes your Buffer account settings.</p>
+
+        <h2>Where your data lives</h2>
+        <p>PostPilot has <strong>no server</strong>. There is no PostPilot database, no PostPilot account system, and no backend collecting anything.</p>
+        <ul>
+          <li>Your brief and your draft posts exist only in the page open in your browser.</li>
+          <li>Your Buffer access token (and refresh token, if Buffer issues one) is stored <strong>only in your own browser's localStorage</strong>, on your device, so you stay connected between visits. It is never sent anywhere except to Buffer's own API, in the Authorization header of requests you initiate.</li>
+          <li>When you schedule posts, the post text, channel and time are sent directly from your browser to Buffer's API (api.buffer.com) — that is the scheduling you asked for. Nothing is sent to any PostPilot server, because there is none.</li>
+        </ul>
+
+        <h2>What is never done with your data</h2>
+        <ul>
+          <li>Nothing is sold, rented or shared with third parties.</li>
+          <li>There is no advertising, no analytics and no tracking of any kind in PostPilot.</li>
+          <li>Your brief, drafts and tokens are never used to train models or for any purpose other than scheduling your posts.</li>
+        </ul>
+
+        <h2>Disconnecting and deleting</h2>
+        <p>You can disconnect at any time with the <strong>Disconnect</strong> button in PostPilot, which removes the stored tokens from your browser's localStorage immediately. You can also revoke PostPilot's access from your Buffer account settings, and clearing your browser's site data removes everything PostPilot stored. Drafts and the on-screen queue disappear when you close or reload the page.</p>
+
+        <h2>Questions</h2>
+        <p>PostPilot is an independent project built on Buffer's public API. If something in this policy is unclear, disconnect and remove the stored tokens first — that takes effect instantly — and check Buffer's own privacy policy for how Buffer handles your account and scheduled posts.</p>
+
+        <footer>
+          <p>PostPilot — a day of posts from one brief.</p>
+          <span class="spacer"></span>
+          <button class="link-btn" id="privacy-back-link" type="button">Back to PostPilot</button>
+        </footer>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script>
+    'use strict';
+
+    /* =====================================================================
+       CONFIG — the one place to wire PostPilot to Buffer.
+       Create a PUBLIC OAuth client in Buffer (Settings → API → App Clients),
+       then replace the placeholder below with its client_id. There is no
+       client secret anywhere in this app: PostPilot is a public client and
+       authenticates with PKCE (S256) alone.
+       ===================================================================== */
+    const CONFIG = {
+      client_id: 'PASTE_BUFFER_CLIENT_ID',
+      scopes: 'posts:write posts:read account:read offline_access'
+    };
+
+    const DEMO_MODE = CONFIG.client_id === 'PASTE_BUFFER_CLIENT_ID';
+    const REDIRECT_URI = window.location.origin + window.location.pathname;
+
+    const LS_ACCESS = 'postpilot_access_token';
+    const LS_REFRESH = 'postpilot_refresh_token';
+    const LS_EXPIRES = 'postpilot_token_expires_at';
+    const SS_VERIFIER = 'postpilot_pkce_verifier';
+    const SS_STATE = 'postpilot_oauth_state';
+
+    /* =====================================================================
+       BufferAPI — every Buffer network call lives in this one module.
+       Endpoints per Buffer's developer documentation (developers.buffer.com):
+         Authorize: GET  https://auth.buffer.com/auth
+         Token:     POST https://auth.buffer.com/token  (form-encoded, PKCE)
+         API:       POST https://api.buffer.com         (GraphQL, Bearer token)
+       ===================================================================== */
+    const BufferAPI = {
+      AUTH_URL: 'https://auth.buffer.com/auth',
+      TOKEN_URL: 'https://auth.buffer.com/token',
+      API_URL: 'https://api.buffer.com',
+
+      getAccessToken() { return localStorage.getItem(LS_ACCESS); },
+      getRefreshToken() { return localStorage.getItem(LS_REFRESH); },
+      isConnected() { return !!this.getAccessToken(); },
+
+      saveTokens(data) {
+        if (data.access_token) localStorage.setItem(LS_ACCESS, data.access_token);
+        if (data.refresh_token) localStorage.setItem(LS_REFRESH, data.refresh_token);
+        if (data.expires_in) localStorage.setItem(LS_EXPIRES, String(Date.now() + data.expires_in * 1000));
+      },
+      clearTokens() {
+        localStorage.removeItem(LS_ACCESS);
+        localStorage.removeItem(LS_REFRESH);
+        localStorage.removeItem(LS_EXPIRES);
+      },
+
+      /* Exchange an authorization code for tokens (public client: no secret). */
+      async exchangeCode(code, codeVerifier) {
+        const body = new URLSearchParams({
+          client_id: CONFIG.client_id,
+          grant_type: 'authorization_code',
+          code: code,
+          redirect_uri: REDIRECT_URI,
+          code_verifier: codeVerifier
+        });
+        const res = await fetch(this.TOKEN_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: body
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.access_token) {
+          throw new Error(data.error_description || data.error || ('Token exchange failed (HTTP ' + res.status + ')'));
+        }
+        this.saveTokens(data);
+        return data;
+      },
+
+      /* Refresh tokens are single-use: always store the newest pair. */
+      async refreshAccessToken() {
+        const refresh = this.getRefreshToken();
+        if (!refresh) throw new Error('No refresh token stored.');
+        const body = new URLSearchParams({
+          client_id: CONFIG.client_id,
+          grant_type: 'refresh_token',
+          refresh_token: refresh
+        });
+        const res = await fetch(this.TOKEN_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: body
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.access_token) {
+          throw new Error(data.error_description || data.error || ('Token refresh failed (HTTP ' + res.status + ')'));
+        }
+        this.saveTokens(data);
+        return data.access_token;
+      },
+
+      async graphql(query, variables, retried) {
+        const token = this.getAccessToken();
+        if (!token) throw new Error('Not connected to Buffer.');
+        const res = await fetch(this.API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ query: query, variables: variables || {} })
+        });
+        if (res.status === 401 && !retried && this.getRefreshToken()) {
+          await this.refreshAccessToken();
+          return this.graphql(query, variables, true);
+        }
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error('Buffer API error (HTTP ' + res.status + ')');
+        if (data.errors && data.errors.length) throw new Error(data.errors[0].message || 'Buffer API error.');
+        return data.data;
+      },
+
+      async getAccount() {
+        const data = await this.graphql(
+          'query PostPilotAccount { account { id email organizations { id name } } }'
+        );
+        return data.account;
+      },
+
+      /* All channels across all of the user's organizations. */
+      async listChannels() {
+        const account = await this.getAccount();
+        const orgs = (account && account.organizations) || [];
+        const all = [];
+        for (const org of orgs) {
+          const data = await this.graphql(
+            'query PostPilotChannels($organizationId: OrganizationId!) { channels(input: { organizationId: $organizationId }) { id name service } }',
+            { organizationId: org.id }
+          );
+          (data.channels || []).forEach(function (c) { all.push({ id: c.id, name: c.name, service: c.service }); });
+        }
+        return all;
+      },
+
+      /* Schedule one post on one channel at an exact time (ISO 8601 UTC). */
+      async createPost(channelId, text, dueAtIso) {
+        const data = await this.graphql(
+          'mutation PostPilotCreate($input: CreatePostInput!) { createPost(input: $input) { ... on PostActionSuccess { post { id text dueAt } } ... on MutationError { message } } }',
+          { input: { text: text, channelId: channelId, schedulingType: 'automatic', mode: 'customScheduled', dueAt: dueAtIso } }
+        );
+        const result = data.createPost || {};
+        if (result.message) throw new Error(result.message);
+        if (!result.post) throw new Error('Buffer did not confirm the post.');
+        return result.post;
+      }
+    };
+
+    /* ------------------------- PKCE helpers ------------------------- */
+    function base64Url(bytes) {
+      let s = '';
+      bytes.forEach(function (b) { s += String.fromCharCode(b); });
+      return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    }
+    function randomString(byteCount) {
+      const bytes = new Uint8Array(byteCount);
+      crypto.getRandomValues(bytes);
+      return base64Url(bytes);
+    }
+    async function pkceChallenge(verifier) {
+      const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+      return base64Url(new Uint8Array(digest));
+    }
+
+    async function startConnect() {
+      const verifier = randomString(32);
+      const state = randomString(16);
+      sessionStorage.setItem(SS_VERIFIER, verifier);
+      sessionStorage.setItem(SS_STATE, state);
+      const challenge = await pkceChallenge(verifier);
+      const params = new URLSearchParams({
+        client_id: CONFIG.client_id,
+        redirect_uri: REDIRECT_URI,
+        response_type: 'code',
+        scope: CONFIG.scopes,
+        state: state,
+        code_challenge: challenge,
+        code_challenge_method: 'S256',
+        prompt: 'consent'
+      });
+      window.location.href = BufferAPI.AUTH_URL + '?' + params.toString();
+    }
+
+    /* On load: if Buffer sent us back with ?code=&state=, finish the flow. */
+    async function handleOAuthCallback() {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      const state = params.get('state');
+      const error = params.get('error');
+      if (!code && !error) return false;
+
+      const cleanUrl = REDIRECT_URI + window.location.hash;
+      window.history.replaceState({}, document.title, cleanUrl);
+
+      if (error) {
+        showToast('Buffer connection was not approved (' + error + '). Nothing was connected.');
+        return true;
+      }
+      const expectedState = sessionStorage.getItem(SS_STATE);
+      const verifier = sessionStorage.getItem(SS_VERIFIER);
+      sessionStorage.removeItem(SS_STATE);
+      sessionStorage.removeItem(SS_VERIFIER);
+      if (!expectedState || state !== expectedState) {
+        showToast('Connection failed: the OAuth state did not match. Please try connecting again.');
+        return true;
+      }
+      if (!verifier) {
+        showToast('Connection failed: the PKCE verifier is missing. Please try connecting again.');
+        return true;
+      }
+      try {
+        showToast('Finishing your Buffer connection…');
+        await BufferAPI.exchangeCode(code, verifier);
+        showToast('Connected to Buffer. Your channels are loaded below.');
+      } catch (e) {
+        showToast('Connection failed: ' + e.message);
+      }
+      return true;
+    }
+</script>
+
+    <script>
+    'use strict';
+
+    /* =====================================================================
+       Drafting engine — turns one brief into a varied day of posts.
+       Rotates post types (hook, question, tip, mini-story, take, CTA),
+       weaves the brief's own keywords through them, and shades the wording
+       by tone. Everything runs locally; no text ever leaves the browser.
+       ===================================================================== */
+    const STOPWORDS = new Set(('the a an and or of to in on for with our your we are is it its this that from at by be will can all new get got one day today just like more over into about so as per than then them they you i my me us our out up down off who what when where why how not no yes do does did have has had were was been being am im ive ill youre theyre thats heres theres dont cant wont lets let go going gonna want really much many every each other another first last next now still even also back way make made take makes thing things stuff lot bit way ways time people way really very just').split(' '));
+
+    const NICHE_DATA = {
+      'Comedy / Entertainment': { tags: ['#Comedy', '#Entertainment', '#Funny'], crowd: 'everyone scrolling past', world: 'the timeline' },
+      'Sports': { tags: ['#Sports', '#GameDay', '#AthleteLife'], crowd: 'fans', world: 'the game' },
+      'Food': { tags: ['#Foodie', '#HomeCooking', '#FoodLovers'], crowd: 'hungry scrollers', world: 'the kitchen' },
+      'Tech': { tags: ['#Tech', '#Innovation', '#BuildInPublic'], crowd: 'builders', world: 'the product' },
+      'Motivation': { tags: ['#Motivation', '#Mindset', '#KeepGoing'], crowd: 'anyone who needed to hear this', world: 'the journey' },
+      'Pets': { tags: ['#Pets', '#PetLovers', '#DailyDose'], crowd: 'fellow pet people', world: 'the household' },
+      'Business': { tags: ['#Business', '#Founders', '#SmallBusiness'], crowd: 'fellow founders', world: 'the business' }
+    };
+
+    const TIME_SLOTS = {
+      3: [ { time: '08:30', label: 'Morning' }, { time: '13:00', label: 'Midday' }, { time: '19:30', label: 'Evening' } ],
+      4: [ { time: '08:30', label: 'Morning' }, { time: '12:30', label: 'Midday' }, { time: '17:00', label: 'Afternoon' }, { time: '20:30', label: 'Evening' } ],
+      5: [ { time: '08:00', label: 'Morning' }, { time: '11:00', label: 'Late morning' }, { time: '13:30', label: 'Midday' }, { time: '17:30', label: 'Afternoon' }, { time: '21:00', label: 'Night' } ]
+    };
+
+    function hashCode(str) {
+      let h = 2166136261;
+      for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+      return Math.abs(h);
+    }
+    function pick(arr, seed) { return arr[seed % arr.length]; }
+    function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+
+    function parseBrief(raw) {
+      const text = raw.trim().replace(/\s+/g, ' ');
+      const sentences = text.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(Boolean);
+      const topic = (sentences[0] || text).replace(/[.!?]+$/, '');
+      const freq = new Map();
+      const order = [];
+      text.toLowerCase().replace(/[^a-z0-9' -]/g, ' ').split(/\s+/).forEach(w => {
+        const word = w.replace(/^[-']+|[-']+$/g, '');
+        if (word.length < 4 || STOPWORDS.has(word)) return;
+        if (!freq.has(word)) { order.push(word); }
+        freq.set(word, (freq.get(word) || 0) + 1);
+      });
+      const keywords = order.slice().sort((a, b) => (freq.get(b) - freq.get(a))).slice(0, 8);
+      return { topic: topic, keywords: keywords, sentences: sentences };
+    }
+
+    /* Template pools per post type. Slots: {T} topic, {K}/{K2}/{K3} keywords,
+       {W} niche world, {C} niche crowd, {tags} hashtag set. */
+    const TEMPLATES = {
+      hook: [
+        'Stop scrolling. {T} — and it changes more than you think.',
+        'Nobody is talking about this yet: {T}.',
+        'Unpopular opinion: {K} is about to have its biggest moment yet. {T}.',
+        'POV: you finally stop putting off {K} — because {t}.',
+        'This is your sign. {T}.'
+      ],
+      question: [
+        'Honest question: when it comes to {K}, where do you stand? {T} — we want your take before we share ours.',
+        'Settle this for us: is {K} overrated, or is everyone just doing it wrong?',
+        'Quick poll, {C}: what is the ONE thing you wish you had known about {K} sooner?',
+        'We keep going back and forth on this — {K}: worth the hype or not? Tell us why.',
+        'What would YOU do? {T}. Drop your answer below, best one gets pinned.'
+      ],
+      tip: [
+        'One small thing that makes a big difference with {K}: start smaller than you think. {T} — consistency beats intensity, every single time.',
+        'Beginner mistake we see with {K} all the time: skipping the basics. Nail {K2} first, then build. Save this for later.',
+        'Three things about {K} we wish someone had told us on day one: 1) start simple 2) stay consistent 3) ignore the noise. {tags}',
+        'Pro tip: the best time to think about {K} is before you need it. The second best time is today.',
+        'If {K} feels overwhelming, shrink the step, not the goal. Small reps on {K2} compound faster than one big push.'
+      ],
+      story: [
+        'True story: {T}. It did not go the way we planned — and honestly, that is exactly why it worked.',
+        'A week ago we almost gave up on {K}. Then one small change flipped everything. Here is the part nobody posts about: the boring middle is where it happens.',
+        'Someone asked us yesterday how {K} is going. Honest answer? Better than ever — and it started with {t}.',
+        'Behind the scenes of {W} today: {T}. Messy, real, and 100% worth it.'
+      ],
+      take: [
+        '{K}, but make it make sense: {T}. That is the whole post.',
+        'Hot take: most people overcomplicate {K}. The ones winning keep it embarrassingly simple.',
+        'Reminder that {K} does not need to be perfect to be worth starting. Done beats perfect in {W}, every time.',
+        'The gap between where you are with {K} and where you want to be? It is smaller than your feed makes it look.'
+      ],
+      cta: [
+        'It is happening: {T}. Do not sit this one out — link in bio, and tell us in the replies when you are in. {tags}',
+        'Today is the day. {T}. Hit follow so you do not miss what comes next, and tag someone who needs {K} in their life.',
+        'Last call energy: {T}. Questions? Drop them below — we are answering everything today.',
+        'Ready when you are: {T}. Start with {K}, and come back and tell us how it went. {tags}'
+      ]
+    };
+
+    const TONE_OPENERS = {
+      Funny: ['Okay so,', 'Plot twist:', 'Nobody:', 'Breaking (not really):'],
+      Inspirational: ['A gentle reminder:', 'Day one, or one day — you decide:', 'For whoever needs this today:'],
+      Informative: ['Worth knowing:', 'Quick explainer:', 'Fact of the day:'],
+      Bold: ['Let us be blunt:', 'No sugarcoating:', 'Say it louder:']
+    };
+    const TONE_CLOSERS = {
+      Funny: ['You are welcome. 😄', 'Send help (and snacks).', 'That is all. Carry on.'],
+      Inspirational: ['Keep going — future you is watching.', 'One step today is still a step.', 'You have got this. Truly.'],
+      Informative: ['Share this with someone it helps.', 'Bookmark it for later.', 'Questions welcome below.'],
+      Bold: ['Act accordingly.', 'No excuses left.', 'Your move.']
+    };
+
+    const TYPE_ROTATION = ['hook', 'question', 'tip', 'story', 'cta', 'take'];
+
+    function fillTemplate(tpl, ctx) {
+      return tpl
+        .replace(/\{T\}/g, cap(ctx.topic))
+        .replace(/\{t\}/g, ctx.topic.charAt(0).toLowerCase() + ctx.topic.slice(1))
+        .replace(/\{K3\}/g, ctx.kw[2] || ctx.kw[0] || 'this')
+        .replace(/\{K2\}/g, ctx.kw[1] || ctx.kw[0] || 'the basics')
+        .replace(/\{K\}/g, ctx.kw[0] || 'this')
+        .replace(/\{W\}/g, ctx.world)
+        .replace(/\{C\}/g, ctx.crowd)
+        .replace(/\{tags\}/g, ctx.tags);
+    }
+
+    function buildPost(type, ctx, seed) {
+      const pool = TEMPLATES[type];
+      let text = fillTemplate(pick(pool, seed), ctx);
+      /* Tone shading: opener on some posts, closer on others — varied, not every post. */
+      if (seed % 3 === 0) text = pick(TONE_OPENERS[ctx.tone], seed + 1) + ' ' + text.charAt(0).toLowerCase() + text.slice(1);
+      if (seed % 3 === 1 && !/\{tags\}/.test(text) && text.indexOf('#') === -1) text += ' ' + pick(TONE_CLOSERS[ctx.tone], seed + 2);
+      if (type === 'tip' || type === 'cta') { if (text.indexOf('#') === -1) text += ' ' + ctx.tags.split(' ').slice(0, 2).join(' '); }
+      return text.length > 500 ? text.slice(0, 497).trim() + '…' : text;
+    }
+
+    function draftDay(briefRaw, niche, tone, count) {
+      const parsed = parseBrief(briefRaw);
+      const ndata = NICHE_DATA[niche] || NICHE_DATA['Business'];
+      const ctx = {
+        topic: parsed.topic || 'today\'s big thing',
+        kw: parsed.keywords.length ? parsed.keywords : ['this'],
+        world: ndata.world, crowd: ndata.crowd,
+        tags: ndata.tags.join(' '), tone: tone
+      };
+      const baseSeed = hashCode(briefRaw + '|' + niche + '|' + tone);
+      const offset = baseSeed % TYPE_ROTATION.length;
+      const slots = TIME_SLOTS[count] || TIME_SLOTS[4];
+      const posts = [];
+      for (let i = 0; i < count; i++) {
+        const type = TYPE_ROTATION[(offset + i) % TYPE_ROTATION.length];
+        posts.push({
+          id: 'draft-' + Date.now() + '-' + i,
+          type: type,
+          seed: baseSeed + i * 7,
+          regenCount: 0,
+          time: slots[i].time,
+          slotLabel: slots[i].label,
+          text: buildPost(type, ctx, baseSeed + i * 7),
+          channelIds: []
+        });
+      }
+      return { posts: posts, ctx: ctx };
+    }
+
+    function regeneratePost(post, ctx) {
+      post.regenCount += 1;
+      /* Cycle to a different type so a re-roll feels genuinely new. */
+      const idx = TYPE_ROTATION.indexOf(post.type);
+      post.type = TYPE_ROTATION[(idx + 1 + (post.regenCount % 2)) % TYPE_ROTATION.length];
+      post.seed = post.seed + 13 + post.regenCount * 5;
+      post.text = buildPost(post.type, ctx, post.seed);
+      return post;
+    }
+</script>
+
+    <script>
+    'use strict';
+
+    /* =====================================================================
+       UI — state, rendering, scheduling.
+       ===================================================================== */
+    const DEMO_CHANNELS = [
+      { id: 'demo-x', name: '@yourbrand on X', service: 'twitter' },
+      { id: 'demo-instagram', name: '@yourbrand on Instagram', service: 'instagram' },
+      { id: 'demo-linkedin', name: 'Your Brand — LinkedIn Page', service: 'linkedin' }
+    ];
+
+    const state = {
+      channels: [],
+      drafts: [],
+      ctx: null,
+      queue: [],
+      connected: false,
+      tone: 'Funny',
+      postCount: 4
+    };
+
+    const $ = function (id) { return document.getElementById(id); };
+    const REGEN_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5V1.8L6.6 6 12 10.2V7c3.3 0 6 2.7 6 6s-2.7 6-6 6-6-2.7-6-6H4c0 4.4 3.6 8 8 8s8-3.6 8-8-3.6-8-8-8z"/></svg>';
+
+    let toastTimer = null;
+    function showToast(msg) {
+      const t = $('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () { t.classList.remove('show'); }, 4200);
+    }
+
+    function esc(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function serviceLabel(service) {
+      const map = { twitter: 'X', facebook: 'Facebook', instagram: 'Instagram', linkedin: 'LinkedIn', threads: 'Threads', tiktok: 'TikTok', youtube: 'YouTube', pinterest: 'Pinterest', bluesky: 'Bluesky', mastodon: 'Mastodon', googlebusiness: 'Google Business' };
+      return map[(service || '').toLowerCase().replace(/[^a-z]/g, '')] || (service || 'Channel');
+    }
+
+    /* ------------------------- Connection UI ------------------------- */
+    function renderConnection() {
+      const pill = $('conn-pill'), text = $('conn-text');
+      const connectBtn = $('connect-btn'), discBtn = $('disconnect-btn'), banner = $('demo-banner');
+      pill.classList.remove('on', 'demo');
+      if (DEMO_MODE) {
+        pill.classList.add('demo');
+        text.textContent = 'Demo mode — not connected';
+        connectBtn.hidden = true;
+        discBtn.hidden = true;
+        banner.hidden = false;
+        return;
+      }
+      banner.hidden = true;
+      if (state.connected) {
+        pill.classList.add('on');
+        text.textContent = 'Connected to Buffer';
+        connectBtn.hidden = true;
+        discBtn.hidden = false;
+      } else {
+        text.textContent = 'Not connected';
+        connectBtn.hidden = false;
+        discBtn.hidden = true;
+      }
+    }
+
+    async function loadChannels() {
+      if (DEMO_MODE) {
+        state.channels = DEMO_CHANNELS.slice();
+        state.drafts.forEach(function (d) { if (!d.channelIds.length) d.channelIds = [state.channels[0].id]; });
+        renderDrafts();
+        return;
+      }
+      if (!BufferAPI.isConnected()) { state.channels = []; state.connected = false; renderConnection(); return; }
+      state.connected = true;
+      renderConnection();
+      try {
+        state.channels = await BufferAPI.listChannels();
+        if (!state.channels.length) showToast('Connected, but Buffer returned no channels. Connect a social profile in Buffer first.');
+        state.drafts.forEach(function (d) { if (!d.channelIds.length && state.channels[0]) d.channelIds = [state.channels[0].id]; });
+      } catch (e) {
+        showToast('Could not load your Buffer channels: ' + e.message);
+        state.channels = [];
+      }
+      renderDrafts();
+    }
+
+    /* ------------------------- Draft rendering ------------------------- */
+    function channelChips(draft) {
+      if (!state.channels.length) {
+        return '<span class="q-channels">' + (DEMO_MODE ? '' : 'Connect Buffer to choose channels.') + '</span>';
+      }
+      return state.channels.map(function (ch) {
+        const pressed = draft.channelIds.indexOf(ch.id) !== -1 ? 'true' : 'false';
+        return '<button type="button" class="chip" data-channel="' + esc(ch.id) + '" aria-pressed="' + pressed + '">' +
+          '<span class="svc"></span>' + esc(ch.name) + '</button>';
+      }).join('');
+    }
+
+    function renderDrafts() {
+      const list = $('drafts-list');
+      $('drafts-empty').style.display = state.drafts.length ? 'none' : '';
+      $('schedule-btn').disabled = !state.drafts.length;
+      list.innerHTML = state.drafts.map(function (d, i) {
+        return '<article class="post-card" data-id="' + d.id + '">' +
+          '<div class="time-rail">' +
+            '<span class="slot-label">' + esc(d.slotLabel) + '</span>' +
+            '<input type="time" value="' + d.time + '" aria-label="Posting time for post ' + (i + 1) + '" />' +
+            '<span class="day-note">tomorrow</span>' +
+          '</div>' +
+          '<div class="post-body">' +
+            '<textarea aria-label="Post ' + (i + 1) + ' text">' + esc(d.text) + '</textarea>' +
+            '<div class="post-meta">' +
+              '<span class="type-tag">' + esc(d.type.toUpperCase()) + '</span>' +
+              '<button class="regen-btn" type="button">' + REGEN_ICON + 'Regenerate</button>' +
+              '<span class="char-count">' + d.text.length + ' / 280</span>' +
+            '</div>' +
+            '<div class="channels-row"><span class="ch-label">Post to</span><div class="chips">' + channelChips(d) + '</div></div>' +
+            '<div class="post-status" role="status"></div>' +
+          '</div>' +
+        '</article>';
+      }).join('');
+
+      list.querySelectorAll('.post-card').forEach(function (card) {
+        const id = card.getAttribute('data-id');
+        const draft = state.drafts.find(function (d) { return d.id === id; });
+        const ta = card.querySelector('textarea');
+        const count = card.querySelector('.char-count');
+        const timeInput = card.querySelector('input[type="time"]');
+        const dayNote = card.querySelector('.day-note');
+
+        function syncDayNote() { dayNote.style.display = isPastToday(timeInput.value) ? '' : 'none'; }
+        ta.addEventListener('input', function () {
+          draft.text = ta.value;
+          count.textContent = ta.value.length + ' / 280';
+          count.classList.toggle('over', ta.value.length > 280);
+        });
+        count.classList.toggle('over', draft.text.length > 280);
+        timeInput.addEventListener('change', function () { draft.time = timeInput.value || draft.time; syncDayNote(); });
+        syncDayNote();
+
+        card.querySelector('.regen-btn').addEventListener('click', function () {
+          regeneratePost(draft, state.ctx);
+          ta.value = draft.text;
+          count.textContent = draft.text.length + ' / 280';
+          count.classList.toggle('over', draft.text.length > 280);
+          card.querySelector('.type-tag').textContent = draft.type.toUpperCase();
+          setCardStatus(card, '', '');
+        });
+        card.querySelectorAll('button[data-channel]').forEach(function (chip) {
+          chip.addEventListener('click', function () {
+            const cid = chip.getAttribute('data-channel');
+            const on = chip.getAttribute('aria-pressed') === 'true';
+            if (on) { draft.channelIds = draft.channelIds.filter(function (x) { return x !== cid; }); chip.setAttribute('aria-pressed', 'false'); }
+            else { if (draft.channelIds.indexOf(cid) === -1) draft.channelIds.push(cid); chip.setAttribute('aria-pressed', 'true'); }
+          });
+        });
+      });
+    }
+
+    function setCardStatus(card, kind, msg) {
+      const el = card.querySelector('.post-status');
+      el.className = 'post-status' + (kind ? ' show ' + kind : '');
+      el.textContent = msg;
+    }
+
+    /* ------------------------- Queue rendering ------------------------- */
+    function renderQueue() {
+      const list = $('queue-list');
+      $('queue-count').innerHTML = state.queue.length ? state.queue.length + (state.queue.length === 1 ? ' post' : ' posts') : '';
+      if (!state.queue.length) {
+        list.innerHTML = '<p class="queue-empty">Nothing scheduled yet. Draft a day and press <strong>Schedule all</strong> — every post lands here with its time, channels and status.</p>';
+        return;
+      }
+      const sorted = state.queue.slice().sort(function (a, b) { return a.dueAt - b.dueAt; });
+      list.innerHTML = sorted.map(function (q) {
+        const d = new Date(q.dueAt);
+        const hh = String(d.getHours()).padStart(2, '0'), mm = String(d.getMinutes()).padStart(2, '0');
+        const day = isToday(d) ? 'Today' : 'Tomorrow';
+        const statusHtml = q.status === 'ok' ? '<span class="q-status ok">SCHEDULED</span>'
+          : q.status === 'demo' ? '<span class="q-status demo">QUEUED · DEMO</span>'
+          : q.status === 'partial' ? '<span class="q-status partial">PARTIAL</span>'
+          : '<span class="q-status fail">FAILED</span>';
+        return '<div class="queue-item">' +
+          '<div class="q-time">' + hh + ':' + mm + '<small>' + day + '</small></div>' +
+          '<div><div class="q-text">' + esc(q.text) + '</div><div class="q-channels">' + esc(q.channelNames.join(' · ')) + (q.note ? ' — ' + esc(q.note) : '') + '</div></div>' +
+          statusHtml +
+        '</div>';
+      }).join('');
+    }
+
+    function isToday(d) {
+      const now = new Date();
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+    }
+    function isPastToday(timeStr) {
+      if (!timeStr) return false;
+      const parts = timeStr.split(':');
+      const d = new Date();
+      d.setHours(parseInt(parts[0], 10), parseInt(parts[1], 10), 0, 0);
+      return d.getTime() <= Date.now();
+    }
+    function dueDateFor(timeStr) {
+      const parts = (timeStr || '09:00').split(':');
+      const d = new Date();
+      d.setHours(parseInt(parts[0], 10) || 9, parseInt(parts[1], 10) || 0, 0, 0);
+      if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1);
+      return d;
+    }
+
+    /* ------------------------- Scheduling ------------------------- */
+    async function scheduleAll() {
+      const btn = $('schedule-btn');
+      const cards = $('drafts-list').querySelectorAll('.post-card');
+      let okCount = 0, failCount = 0;
+      btn.disabled = true;
+
+      for (let i = 0; i < state.drafts.length; i++) {
+        const draft = state.drafts[i];
+        const card = cards[i];
+        btn.textContent = 'Scheduling ' + (i + 1) + ' of ' + state.drafts.length + '…';
+
+        const text = draft.text.trim();
+        const chosen = state.channels.filter(function (c) { return draft.channelIds.indexOf(c.id) !== -1; });
+        if (!text) { setCardStatus(card, 'fail', 'This post is empty — write something first.'); failCount++; continue; }
+        if (!chosen.length) { setCardStatus(card, 'fail', 'Pick at least one channel for this post.'); failCount++; continue; }
+
+        const due = dueDateFor(draft.time);
+        const dayNote = isToday(due) ? '' : 'goes out tomorrow';
+
+        if (DEMO_MODE) {
+          state.queue.push({ text: text, dueAt: due.getTime(), channelNames: chosen.map(c => c.name), status: 'demo', note: dayNote + (dayNote ? ' · ' : '') + 'demo queue only — connect Buffer to publish for real' });
+          setCardStatus(card, 'ok', 'Added to today\'s queue (demo). ' + cap(dayNote || 'Scheduled for today') + '.');
+          okCount++;
+          continue;
+        }
+
+        const results = [];
+        for (const ch of chosen) {
+          try {
+            const post = await BufferAPI.createPost(ch.id, text, due.toISOString());
+            results.push({ channel: ch, ok: true, id: post.id });
+          } catch (e) {
+            results.push({ channel: ch, ok: false, error: e.message });
+          }
+        }
+        const good = results.filter(r => r.ok), bad = results.filter(r => !r.ok);
+        if (good.length) {
+          state.queue.push({
+            text: text, dueAt: due.getTime(),
+            channelNames: good.map(r => r.channel.name),
+            status: bad.length ? 'partial' : 'ok',
+            note: (dayNote ? dayNote + ' · ' : '') + 'via Buffer' + (bad.length ? ' · failed on ' + bad.map(r => r.channel.name + ' (' + r.error + ')').join(', ') : '')
+          });
+        }
+        if (!bad.length) { setCardStatus(card, 'ok', 'Scheduled in Buffer for ' + draft.time + (dayNote ? ' tomorrow' : ' today') + ' on ' + good.length + (good.length === 1 ? ' channel' : ' channels') + '.'); okCount++; }
+        else if (good.length) { setCardStatus(card, 'partial', 'Scheduled on ' + good.map(r => r.channel.name).join(', ') + ' — failed on ' + bad.map(r => r.channel.name + ': ' + r.error).join('; ') + '.'); failCount++; }
+        else { setCardStatus(card, 'fail', 'Buffer could not schedule this: ' + bad[0].error); failCount++; }
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Schedule all';
+      renderQueue();
+      if (failCount === 0) showToast(DEMO_MODE ? 'Day planned. ' + okCount + ' posts are in the demo queue below.' : 'Done — ' + okCount + ' posts scheduled in Buffer.');
+      else showToast(okCount + ' scheduled, ' + failCount + ' need attention — see the notes on each card.');
+      $('queue-list').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    /* ------------------------- Views ------------------------- */
+    function showPrivacy() {
+      $('app-view').hidden = true;
+      $('privacy-view').hidden = false;
+      window.scrollTo(0, 0);
+      if (window.location.hash !== '#privacy') window.history.pushState({}, '', window.location.pathname + window.location.search + '#privacy');
+    }
+    function showApp() {
+      $('privacy-view').hidden = true;
+      $('app-view').hidden = false;
+      window.scrollTo(0, 0);
+      if (window.location.hash === '#privacy') window.history.pushState({}, '', window.location.pathname + window.location.search);
+    }
+
+    /* ------------------------- Wiring ------------------------- */
+    document.addEventListener('DOMContentLoaded', async function () {
+      $('today-date').textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+
+      $('privacy-link').addEventListener('click', showPrivacy);
+      $('privacy-back-btn').addEventListener('click', showApp);
+      $('privacy-back-link').addEventListener('click', showApp);
+      $('privacy-home-link').addEventListener('click', function (e) { e.preventDefault(); showApp(); });
+      $('wordmark-link').addEventListener('click', function (e) { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+      window.addEventListener('hashchange', function () {
+        if (window.location.hash === '#privacy') showPrivacy();
+      });
+      if (window.location.hash === '#privacy') showPrivacy();
+
+      $('connect-btn').addEventListener('click', function () {
+        if (DEMO_MODE) return;
+        startConnect().catch(function (e) { showToast('Could not start the Buffer connection: ' + e.message); });
+      });
+      $('disconnect-btn').addEventListener('click', function () {
+        BufferAPI.clearTokens();
+        state.connected = false;
+        state.channels = [];
+        renderConnection();
+        renderDrafts();
+        showToast('Disconnected. Your Buffer tokens were removed from this browser.');
+      });
+
+      function wireSegmented(groupId, attr, apply) {
+        const group = $(groupId);
+        group.querySelectorAll('button.seg').forEach(function (b) {
+          b.addEventListener('click', function () {
+            group.querySelectorAll('button.seg').forEach(function (x) { x.setAttribute('aria-pressed', 'false'); });
+            b.setAttribute('aria-pressed', 'true');
+            apply(b.getAttribute(attr));
+          });
+        });
+      }
+      wireSegmented('tone-group', 'data-tone', function (v) { state.tone = v; });
+      wireSegmented('count-group', 'data-count', function (v) { state.postCount = parseInt(v, 10); });
+
+      $('brief-form').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const brief = $('brief-text').value.trim();
+        if (!brief) { showToast('Write a short brief first — one or two sentences is enough.'); return; }
+        const niche = $('niche').value;
+        const tone = state.tone;
+        const count = state.postCount;
+        const result = draftDay(brief, niche, tone, count);
+        state.ctx = result.ctx;
+        state.drafts = result.posts;
+        state.drafts.forEach(function (d) { if (state.channels.length) d.channelIds = [state.channels[0].id]; });
+        renderDrafts();
+        showToast('Your day is drafted — ' + count + ' posts, each with its own angle. Edit anything, then schedule.');
+        $('drafts-heading').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+
+      $('schedule-btn').addEventListener('click', function () {
+        if (!DEMO_MODE && !state.connected) { showToast('Connect Buffer first — then Schedule all sends these straight to your Buffer queue.'); return; }
+        scheduleAll();
+      });
+
+      renderConnection();
+      renderQueue();
+      await handleOAuthCallback();
+      loadChannels();
+    });
+  </script>
+  </body>
+</html>
